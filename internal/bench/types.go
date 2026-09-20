@@ -1,13 +1,13 @@
 package bench
 
 type Trace struct {
-	Success       bool      `json:"success"`
-	TTFTSeconds   *float64  `json:"ttft_seconds,omitempty"`
-	ITLSeconds    []float64 `json:"itl_seconds"`
-	E2ESeconds    float64   `json:"e2e_seconds"`
-	PromptTokens  *int      `json:"prompt_tokens,omitempty"`
-	OutputTokens  *int      `json:"output_tokens,omitempty"`
-	Error         string    `json:"error,omitempty"`
+	Success      bool      `json:"success"`
+	TTFTSeconds  *float64  `json:"ttft_seconds,omitempty"`
+	ITLSeconds   []float64 `json:"itl_seconds"`
+	E2ESeconds   float64   `json:"e2e_seconds"`
+	PromptTokens *int      `json:"prompt_tokens,omitempty"`
+	OutputTokens *int      `json:"output_tokens,omitempty"`
+	Error        string    `json:"error,omitempty"`
 }
 
 func (t Trace) TPOTSeconds() *float64 {
