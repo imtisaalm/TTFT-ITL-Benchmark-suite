@@ -12,9 +12,13 @@ def write_reports(
     output_dir: str | Path,
     summaries: list[LevelSummary],
     traces_by_level: dict[int, list[RequestTrace]],
+    metadata: dict,
 ) -> None:
     root = Path(output_dir)
     root.mkdir(parents=True, exist_ok=True)
+
+    with (root / "run.json").open("w", encoding="utf-8") as handle:
+        json.dump(metadata, handle, indent=2)
 
     with (root / "summary.json").open("w", encoding="utf-8") as handle:
         json.dump([summary.as_dict() for summary in summaries], handle, indent=2)
