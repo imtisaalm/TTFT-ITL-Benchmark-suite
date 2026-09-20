@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -104,8 +105,14 @@ func writeTraces(path string, traces map[int][]Trace) error {
 	w := bufio.NewWriter(f)
 	defer w.Flush()
 	enc := json.NewEncoder(w)
-	for concurrency, rows := range traces {
-		for _, t := range rows {
+	keys := make([]int, 0, len(traces))
+	for concurrency := range traces {
+		keys = append(keys, concurrency)
+	}
+	sort.Ints(keys)
+
+	for _, concurrency := range keys {
+		for _, t := range traces[concurrency] {
 			record := struct {
 				Concurrency int   `json:"concurrency"`
 				Trace       Trace `json:"trace"`

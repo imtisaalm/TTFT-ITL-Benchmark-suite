@@ -2,6 +2,7 @@ name: test
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -23,5 +24,5 @@ jobs:
           cache: false
       - run: test -z "$(gofmt -l .)"
       - run: go vet ./...
-      - run: go test ./...
+      - run: go test -race ./...
       - run: go build ./cmd/ttft-itl-benchmark
