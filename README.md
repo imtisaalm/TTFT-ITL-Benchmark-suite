@@ -1,141 +1,140 @@
 # TTFT / ITL Benchmark Suite
 
-A concurrency-sweep load-testing harness for streamed OpenAI-compatible inference endpoints.
+A Go load-testing harness for streamed OpenAI-compatible inference endpoints.
 
-The suite records request-level traces and reports time to first token (TTFT), inter-token/inter-chunk latency (ITL), time per output token (TPOT), end-to-end latency, request throughput, and token throughput as concurrency increases.
+The benchmark runs controlled concurrency sweeps and records time to first token (TTFT), inter-token/inter-chunk latency (ITL), time per output token (TPOT), end-to-end latency, request throughput, and token throughput.
+
+## Why Go
+
+The load generator is implemented in Go so client-side concurrency, connection reuse, streaming, and timing are handled without a Python async runtime. Each concurrency level uses a fixed worker pool of goroutines over a shared HTTP transport.
+
+The inference server itself may be implemented in any language or runtime. The only requirement is an OpenAI-compatible streaming chat-completions endpoint.
 
 ## Measurement model
 
-Each concurrency level is run as a closed-loop workload. At most `N` HTTP requests are active at once. When one request completes, the next waiting task enters the client slot. Request timing starts only after the concurrency semaphore is acquired, so client-side semaphore wait is excluded from TTFT and end-to-end latency.
+Each concurrency level is a closed-loop workload. At most N requests are active at once. When one request completes, a worker accepts the next queued request. Per-request timing starts when the HTTP request is constructed by an active worker, so time spent waiting in the local job queue is excluded.
 
-Warm-up requests are issued before the measured sweep and are not included in reported statistics.
+Warm-up requests run before the measured sweep and are excluded from statistics.
 
-### Metrics
+### TTFT
 
-**TTFT**
+Elapsed time from request initiation to the first non-empty streamed content chunk.
 
-Time from initiating the HTTP request to the first non-empty streamed content chunk.
+### ITL
 
-**ITL**
+Elapsed time between consecutive non-empty streamed content chunks.
 
-Intervals between consecutive non-empty streamed content chunks. For servers that emit one token per content-bearing SSE chunk, this is token-level ITL. If a server aggregates multiple tokens into a chunk, the value is inter-chunk latency and should not be interpreted as exact token-level ITL.
+When the server emits one token per content-bearing SSE chunk, this is token-level ITL. If a server coalesces several tokens into one chunk, the value is inter-chunk latency and should not be presented as exact token-level ITL.
 
-**TPOT**
+### TPOT
 
-When the endpoint returns streamed usage metadata, TPOT is computed per request as:
+When completion-token counts are returned through streamed usage metadata:
 
 ```text
 (E2E latency - TTFT) / (completion_tokens - 1)
 ```
 
-**Request throughput**
+### Throughput
 
-Successful requests divided by wall-clock duration of the concurrency level.
+Request throughput is successful requests divided by level wall time.
 
-**Output throughput**
+Output-token throughput uses the server-reported completion-token count. If the endpoint does not return streamed usage metadata, token-throughput fields remain absent rather than being estimated from text length.
 
-Server-reported completion tokens divided by wall-clock duration. If streamed usage metadata is unavailable, token-throughput fields remain null rather than being estimated from text length.
+## Build
 
-Percentiles are reported at p50, p90, p95, and p99 for TTFT and ITL, with p50/p99 for TPOT and end-to-end latency.
-
-## Prefix-cache control
-
-By default, a deterministic request identifier is inserted at the beginning of each prompt. This reduces unintended reuse of a long common prefix across repeated benchmark requests.
-
-Use `--shared-prefix` only when prefix-cache reuse is intentionally part of the experiment.
-
-## Installation
+Requires Go 1.23 or newer.
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -e '.[test]'
+go build ./cmd/ttft-itl-benchmark
+go test ./...
 ```
 
-Optional plotting:
+## Run
 
 ```bash
-python -m pip install -e '.[plot]'
+go run ./cmd/ttft-itl-benchmark \
+  -url http://127.0.0.1:8000 \
+  -model local-model \
+  -concurrency 1,2,4,8,16,32 \
+  -requests 50 \
+  -max-tokens 128 \
+  -engine vllm \
+  -hardware "RTX 4090 24GB" \
+  -output results/run-001
 ```
 
-## Run a concurrency sweep
+Set `OPENAI_API_KEY` when authentication is enabled.
 
-The command below targets the companion self-hosted vLLM server configuration, but any compatible streaming endpoint can be used.
-
-```bash
-ttft-itl-benchmark run \
-  --url http://127.0.0.1:8000 \
-  --model local-model \
-  --concurrency 1,2,4,8,16,32 \
-  --requests 50 \
-  --max-tokens 128 \
-  --engine vllm \
-  --hardware "RTX 4090 24GB" \
-  --output results/run-001
-```
-
-If the endpoint requires authentication, set `OPENAI_API_KEY` in the environment.
-
-The terminal summary is intentionally compact:
+The terminal output is intentionally compact:
 
 ```text
 concurrency  rps    out_tok/s  ttft_p50  ttft_p99  itl_p50  itl_p99
 ```
 
-No example performance numbers are checked into the repository because latency and throughput are hardware-, model-, runtime-, and configuration-dependent.
+No synthetic performance results are committed. Latency and throughput depend on the model, serving engine, accelerator, precision, context distribution, scheduler configuration, and cache state.
 
-## Result files
+## Prefix-cache control
 
-Each run directory contains:
+By default, a deterministic request identifier is inserted at the beginning of the prompt. This prevents the benchmark from unintentionally measuring a long shared prefix from an enabled prefix cache.
+
+Use `-shared-prefix` only when prefix reuse is intentionally part of the experiment.
+
+## Output
+
+Each run writes:
 
 ```text
-run.json        experimental context and host metadata
-summary.json    one aggregate record per concurrency level
-summary.csv     tabular form of the same aggregate records
-traces.jsonl    request-level traces and failure details
+run.json        experiment and host metadata
+summary.json    aggregate metrics by concurrency
+summary.csv     tabular aggregate metrics
+traces.jsonl    individual request traces
 ```
 
-`run.json` records:
+`run.json` includes:
 
 - UTC timestamp
-- engine label
+- Go version
+- operating system and architecture
+- serving-engine label
 - hardware label
-- host platform and machine architecture
-- Python version
-- endpoint and model name
-- concurrency levels
-- requests per level
-- maximum generated tokens
+- endpoint and model
+- concurrency sweep
+- request count
+- output-token limit
 - warm-up count
 - prefix-cache mode
 
-This keeps benchmark outputs interpretable when results are compared later.
+## Implementation
 
-## Plot load curves
+```text
+cmd/ttft-itl-benchmark/
+    main.go             CLI
 
-```bash
-ttft-itl-benchmark plot \
-  results/run-001/summary.json \
-  --output results/run-001
+internal/bench/
+    client.go           SSE streaming client
+    runner.go           goroutine worker pools and load sweep
+    metrics.go          percentile and throughput aggregation
+    workload.go         deterministic prompt construction
+    report.go           JSON, CSV, and trace persistence
 ```
 
-The plotting command writes separate TTFT and output-throughput curves. Raw JSON/CSV remains the primary result format.
+The HTTP transport is shared across workers so connections can be reused. The scanner buffer is increased for streamed responses, and individual request failures are recorded in the trace set instead of terminating an entire sweep.
 
 ## Tests
 
 ```bash
-pytest -q
+go test ./...
 ```
 
-The unit tests cover SSE parsing, TPOT calculation, percentile interpolation, throughput aggregation, and prefix-cache workload construction. Network benchmarking is excluded from CI.
+CI runs `go vet` and the full Go test suite.
 
 ## Interpretation
 
-A useful serving curve normally shows two regimes: a region where throughput increases with concurrency at acceptable latency, followed by a saturation region where queueing and TTFT rise faster than throughput. This repository reports the measurements needed to locate that transition; it does not assign a universal capacity threshold.
+The useful operating region is generally the range in which throughput continues to rise without disproportionate growth in queueing and TTFT. The tool reports the load curve; it does not define a universal saturation threshold.
 
-Comparisons should hold constant at least the model, runtime version, accelerator, quantization/precision, context distribution, output-token limit, scheduler configuration, and prefix-cache mode.
+Comparisons should hold constant the model, engine version, accelerator, precision or quantization, prompt/output distribution, scheduler configuration, and prefix-cache policy.
 
 ## References
 
-- vLLM benchmark CLI and metric definitions: https://docs.vllm.ai/en/latest/benchmarking/cli/
+- vLLM benchmark terminology: https://docs.vllm.ai/en/latest/benchmarking/cli/
 - vLLM serving metrics: https://docs.vllm.ai/en/latest/design/metrics/
