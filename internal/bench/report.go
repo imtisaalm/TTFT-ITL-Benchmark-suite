@@ -7,10 +7,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
+	"time"
 )
 
 type RunMetadata struct {
+	TimestampUTC     string `json:"timestamp_utc"`
+	GoVersion        string `json:"go_version"`
+	OS               string `json:"os"`
+	Arch             string `json:"arch"`
 	Engine           string `json:"engine"`
 	Hardware         string `json:"hardware"`
 	BaseURL          string `json:"base_url"`
@@ -20,6 +26,15 @@ type RunMetadata struct {
 	MaxTokens        int    `json:"max_tokens"`
 	Warmups          int    `json:"warmups"`
 	SharedPrefix     bool   `json:"shared_prefix"`
+}
+
+func NewRunMetadata() RunMetadata {
+	return RunMetadata{
+		TimestampUTC: time.Now().UTC().Format(time.RFC3339),
+		GoVersion:    runtime.Version(),
+		OS:           runtime.GOOS,
+		Arch:         runtime.GOARCH,
+	}
 }
 
 func WriteReports(dir string, meta RunMetadata, result SweepResult) error {
