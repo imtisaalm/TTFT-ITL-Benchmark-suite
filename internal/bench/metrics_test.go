@@ -17,8 +17,8 @@ func TestSummarize(t *testing.T) {
 	p1, p2 := 10, 12
 	o1, o2 := 3, 3
 	traces := []Trace{
-		{Success:true, TTFTSeconds:&ttft1, ITLSeconds:[]float64{0.02,0.03}, E2ESeconds:0.5, PromptTokens:&p1, OutputTokens:&o1},
-		{Success:true, TTFTSeconds:&ttft2, ITLSeconds:[]float64{0.04,0.05}, E2ESeconds:0.6, PromptTokens:&p2, OutputTokens:&o2},
+		{Success: true, TTFTSeconds: &ttft1, ITLSeconds: []float64{0.02, 0.03}, E2ESeconds: 0.5, PromptTokens: &p1, OutputTokens: &o1},
+		{Success: true, TTFTSeconds: &ttft2, ITLSeconds: []float64{0.04, 0.05}, E2ESeconds: 0.6, PromptTokens: &p2, OutputTokens: &o2},
 	}
 	s := Summarize(2, traces, 1.0)
 	if s.OutputThroughputTPS == nil || *s.OutputThroughputTPS != 6 {
