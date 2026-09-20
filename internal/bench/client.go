@@ -99,7 +99,11 @@ func (c *Client) Stream(ctx context.Context, prompt string, maxTokens int) Trace
 		}
 		var ch chunk
 		if err := json.Unmarshal([]byte(data), &ch); err != nil {
-			continue
+			return Trace{
+				Success:    false,
+				E2ESeconds: time.Since(start).Seconds(),
+				Error:      fmt.Sprintf("decode SSE chunk: %v", err),
+			}
 		}
 		if ch.Usage != nil {
 			p := ch.Usage.PromptTokens
