@@ -76,16 +76,6 @@ func main() {
 	meta.MaxTokens = *maxTokens
 	meta.Warmups = *warmups
 	meta.SharedPrefix = *sharedPrefix
-	/*
-		Hardware:         *hardware,
-		BaseURL:          *url,
-		Model:            *model,
-		Concurrency:      levels,
-		RequestsPerLevel: *requests,
-		MaxTokens:        *maxTokens,
-		Warmups:          *warmups,
-		SharedPrefix:     *sharedPrefix,
-	}*/
 	if err := bench.WriteReports(*output, meta, result); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
