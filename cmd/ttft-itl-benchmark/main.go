@@ -66,8 +66,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	meta := bench.RunMetadata{
-		Engine:           *engine,
+	meta := bench.NewRunMetadata()
+	meta.Engine = *engine
+	meta.Hardware = *hardware
+	meta.BaseURL = *url
+	meta.Model = *model
+	meta.Concurrency = levels
+	meta.RequestsPerLevel = *requests
+	meta.MaxTokens = *maxTokens
+	meta.Warmups = *warmups
+	meta.SharedPrefix = *sharedPrefix
+	/*
 		Hardware:         *hardware,
 		BaseURL:          *url,
 		Model:            *model,
@@ -76,7 +85,7 @@ func main() {
 		MaxTokens:        *maxTokens,
 		Warmups:          *warmups,
 		SharedPrefix:     *sharedPrefix,
-	}
+	}*/
 	if err := bench.WriteReports(*output, meta, result); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
