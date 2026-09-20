@@ -72,7 +72,7 @@ func writeSummaryCSV(path string, rows []LevelSummary) error {
 	defer f.Close()
 	w := csv.NewWriter(f)
 	defer w.Flush()
-	if err := w.Write([]string{"concurrency","attempted","succeeded","failed","duration_s","request_throughput_rps","output_throughput_tps","ttft_p50_ms","ttft_p99_ms","itl_p50_ms","itl_p99_ms"}); err != nil {
+	if err := w.Write([]string{"concurrency", "attempted", "succeeded", "failed", "duration_s", "request_throughput_rps", "output_throughput_tps", "ttft_p50_ms", "ttft_p99_ms", "itl_p50_ms", "itl_p99_ms"}); err != nil {
 		return err
 	}
 	for _, r := range rows {
