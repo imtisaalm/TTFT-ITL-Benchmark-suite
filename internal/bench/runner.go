@@ -60,6 +60,7 @@ func Run(ctx context.Context, cfg SweepConfig) (SweepResult, error) {
 			MaxConnsPerHost:     0,
 		},
 	}
+	defer httpClient.CloseIdleConnections()
 	client := &Client{
 		BaseURL: cfg.BaseURL,
 		Model:   cfg.Model,
@@ -68,11 +69,14 @@ func Run(ctx context.Context, cfg SweepConfig) (SweepResult, error) {
 	}
 
 	for i := 0; i < cfg.Warmups; i++ {
-		_ = client.Stream(
+		trace := client.Stream(
 			ctx,
 			Prompt(cfg.BasePrompt, -1-i, cfg.SharedPrefix),
 			min(cfg.MaxTokens, 32),
 		)
+		if !trace.Success {
+			return SweepResult{}, fmtError("warm-up request failed: " + trace.Error)
+		}
 	}
 
 	result := SweepResult{Traces: make(map[int][]Trace)}
