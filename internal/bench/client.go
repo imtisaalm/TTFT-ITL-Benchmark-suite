@@ -50,11 +50,11 @@ type chunk struct {
 
 func (c *Client) Stream(ctx context.Context, prompt string, maxTokens int) Trace {
 	body, err := json.Marshal(streamRequest{
-		Model: c.Model,
-		Messages: []chatMessage{{Role: "user", Content: prompt}},
-		Temperature: 0,
-		MaxTokens: maxTokens,
-		Stream: true,
+		Model:         c.Model,
+		Messages:      []chatMessage{{Role: "user", Content: prompt}},
+		Temperature:   0,
+		MaxTokens:     maxTokens,
+		Stream:        true,
 		StreamOptions: streamOptions{IncludeUsage: true},
 	})
 	if err != nil {
