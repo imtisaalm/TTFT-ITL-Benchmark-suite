@@ -2,6 +2,7 @@ package bench
 
 import (
 	"context"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -43,8 +44,9 @@ func (c SweepConfig) Validate() error {
 }
 
 type configError string
+
 func (e configError) Error() string { return string(e) }
-func fmtError(s string) error { return configError(s) }
+func fmtError(s string) error       { return configError(s) }
 
 func Run(ctx context.Context, cfg SweepConfig) (SweepResult, error) {
 	if err := cfg.Validate(); err != nil {
@@ -60,13 +62,17 @@ func Run(ctx context.Context, cfg SweepConfig) (SweepResult, error) {
 	}
 	client := &Client{
 		BaseURL: cfg.BaseURL,
-		Model: cfg.Model,
-		APIKey: os.Getenv("OPENAI_API_KEY"),
-		HTTP: httpClient,
+		Model:   cfg.Model,
+		APIKey:  os.Getenv("OPENAI_API_KEY"),
+		HTTP:    httpClient,
 	}
 
 	for i := 0; i < cfg.Warmups; i++ {
-		_ = client.Stream(ctx, Prompt(cfg.BasePrompt, -1-i, cfg.SharedPrefix), min(cfg.MaxTokens, 32))
+		_ = client.Stream(
+			ctx,
+			Prompt(cfg.BasePrompt, -1-i, cfg.SharedPrefix),
+			min(cfg.MaxTokens, 32),
+		)
 	}
 
 	result := SweepResult{Traces: make(map[int][]Trace)}
@@ -82,7 +88,13 @@ func Run(ctx context.Context, cfg SweepConfig) (SweepResult, error) {
 	return result, nil
 }
 
-func runLevel(ctx context.Context, client *Client, cfg SweepConfig, concurrency int, offset int) []Trace {
+func runLevel(
+	ctx context.Context,
+	client *Client,
+	cfg SweepConfig,
+	concurrency int,
+	offset int,
+) []Trace {
 	jobs := make(chan int)
 	results := make(chan Trace, cfg.RequestsPerLevel)
 	var wg sync.WaitGroup
