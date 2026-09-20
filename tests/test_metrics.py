@@ -1,3 +1,5 @@
+import pytest
+
 from ttft_itl_benchmark.client import RequestTrace
 from ttft_itl_benchmark.metrics import percentile, summarize_level
 
@@ -19,4 +21,4 @@ def test_level_summary_uses_server_token_counts() -> None:
     assert summary.request_throughput_rps == 2.0
     assert summary.output_throughput_tps == 6.0
     assert summary.total_throughput_tps == 28.0
-    assert summary.ttft_p50_ms == 150.0
+    assert summary.ttft_p50_ms == pytest.approx(150.0)
