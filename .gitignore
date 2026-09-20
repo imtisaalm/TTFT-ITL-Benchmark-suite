@@ -1,8 +1,5 @@
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.venv/
 .env
-dist/
-build/
-*.egg-info/
+results/
+ttft-itl-benchmark
+*.prof
+coverage.out
