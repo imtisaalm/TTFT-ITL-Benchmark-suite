@@ -5,6 +5,7 @@ from pathlib import Path
 
 import typer
 
+from .metadata import build_run_metadata
 from .plot import plot_summary
 from .report import write_reports
 from .runner import SweepConfig, run_sweep
@@ -44,6 +45,8 @@ def run_command(
         False,
         help="Intentionally retain a shared prompt prefix.",
     ),
+    engine: str = typer.Option("openai-compatible"),
+    hardware: str = typer.Option("unspecified"),
     output: Path = typer.Option(Path("results")),
 ) -> None:
     """Run a closed-loop concurrency sweep."""
@@ -58,7 +61,12 @@ def run_command(
         shared_prefix=shared_prefix,
     )
     summaries, traces = asyncio.run(run_sweep(config))
-    write_reports(output, summaries, traces)
+    metadata = build_run_metadata(
+        config,
+        engine=engine,
+        hardware=hardware,
+    )
+    write_reports(output, summaries, traces, metadata.as_dict())
 
     typer.echo(
         "concurrency  rps    out_tok/s  "
